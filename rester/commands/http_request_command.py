@@ -185,10 +185,10 @@ class ResterHttpRequestCommand(sublime_plugin.WindowCommand):
                 self._completed_message = "Done."
             self.request_view.set_status("rester", self._completed_message)
 
-    def handle_response_view(self, filepath, title, body_only):
+    def handle_response_view(self, filepath, title, body_only, headers_only):
         if self.response_view.is_loading():
             fn = lambda: self.handle_response_view(filepath, title,
-                                                   body_only)
+                                                   body_only, headers_only)
             sublime.set_timeout(fn, 100)
 
         else:
@@ -213,8 +213,11 @@ class ResterHttpRequestCommand(sublime_plugin.WindowCommand):
                 view.sel().clear()
                 view.sel().add(selection)
 
-            # Run response commands and finish.
-            self._run_response_commands()
+            if not headers_only:
+                # Run response commands if response body exists
+                self._run_response_commands()
+            
+            # Finish
             self._complete("Request complete. " + title)
 
             # Close all views in the response group other than the current
@@ -301,9 +304,12 @@ class ResterHttpRequestCommand(sublime_plugin.WindowCommand):
         tmpfile.close()
         tmpfile = codecs.open(filename, "w", encoding="UTF8")
 
+        # headers_only with higher priority then body_only
+        headers_only = self.settings.get("headers_only", False);
+
         # Body only, but only on success.
         success = 200 <= thread.response.status <= 299
-        if success and self.settings.get("body_only", False):
+        if success and self.settings.get("body_only", False) and not headers_only:
             if response.body:
                 tmpfile.write(response.body)
             body_only = True
@@ -318,7 +324,7 @@ class ResterHttpRequestCommand(sublime_plugin.WindowCommand):
                 tmpfile.write(header)
                 tmpfile.write("\n")
 
-            if response.body:
+            if response.body and not headers_only:
                 tmpfile.write("\n")
                 tmpfile.write(response.body)
 
@@ -349,7 +355,7 @@ class ResterHttpRequestCommand(sublime_plugin.WindowCommand):
             if not self.settings.get("request_focus", False):
                 # Set the focus to the response group.
                 self.window.focus_group(response_group)
-        self.handle_response_view(tmpfile.name, title, body_only)
+        self.handle_response_view(tmpfile.name, title, body_only, headers_only)
 
     def _get_selection(self, pos=None):
         # Return a string of the selected text or the entire buffer.

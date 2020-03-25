@@ -228,6 +228,7 @@ response_group          | `null`  | Set to the integer index of the group the re
 response_group_clean    | `false` | If indicating a specific response_group, close all other views in that group on each response.
 request_focus           | `false` | Return focus to the request view after displaying the response.
 body_only               | `false` | When writing the response to the buffer, do not include headers.
+headers_only            | `false` | When writing the response to the buffer, do include only headers without body. This option has a higher priority than `body_only`.
 
 #### Side-by-Side Mode
 
